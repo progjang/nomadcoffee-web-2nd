@@ -12,7 +12,11 @@ import FormBox from "../components/auth/FormBox";
 import Input from "../components/auth/Input";
 import Separator from "../components/auth/Separator";
 import routes from "../routes";
-import { useState } from "react";
+import PageTitle from "../components/PageTitle";
+import { useForm } from "react-hook-form";
+import FormError from "../components/auth/FormError";
+import { gql, useMutation } from "@apollo/client";
+import { logUserIn } from "../apollo";
 
 const FacebookLogin = styled.div`
   color: #385285;
@@ -22,42 +26,92 @@ const FacebookLogin = styled.div`
   }
 `;
 
+const LOGIN_MUTATION = gql`
+  mutation login($username: String!, $password:String!) {
+    login(username: $username, password: $password) {
+      ok
+      error
+      token
+    }
+  }
+`;
+
 function Login() {
-  const [username, setUsername] = useState("");
-  const [usernameError, setUsernameError] = useState("");
-  const onUsernameChange = (event) => {
-    setUsernameError("");
-    setUsername(event.target.value);
-  };
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (username === "") {
-      setUsernameError("Not empty pls.");
+  const {register, handleSubmit, formState, getValues, setError, clearErrors} = useForm({
+    mode: "onChange",
+  });
+  const onCompleted = (data) => {
+    const {login:{ok, error, token}} = data;
+    if(!ok){
+      setError("result", {
+        message: error,
+      });
     }
-    if (username.length < 10) {
-      setUsernameError("too short");
+    if(token){
+      logUserIn(token);
     }
+  }
+  
+  const [login, {loading}] = useMutation(LOGIN_MUTATION, {
+    onCompleted,
+  });
+  const onSubmitValid = (data) => {
+    if(loading) {
+      return;
+    }
+    const {username, password } = getValues();
+    login({
+      variables: {
+        username,
+        password
+      }
+    });
   };
+  const clearLoginError = () => {
+    clearErrors("result");
+  }
   return (
   <AuthLayout>
+    <PageTitle title="Login" />
     <FormBox>
       <div>
         <FontAwesomeIcon icon={faInstagram} size="3x" />
       </div>
-      <form onSubmit={handleSubmit}>
-          {usernameError}
-          <Input
-            onChange={onUsernameChange}
-            value={username}
+      <form onSubmit={handleSubmit(onSubmitValid)}>
+      <Input
+          {...register("username", {
+            required: "Username is required.",
+            minLength: {
+              value: 5,
+              message: "Username should be longer than 5 chars."
+            },
+          })}
+          onFocus={clearLoginError}
+            name="username"
             type="text"
             placeholder="Username"
+            hasError={Boolean(formState.errors?.username?.message)}
           />
-        <Input type="password" placeholder="Password" />
+        <FormError message={formState.errors?.username?.message} />
+          <Input 
+          {...register("password", {
+            required: "Password is required."
+          })}
+          onFocus={clearLoginError}
+          name="password"
+          type="password"
+          placeholder="Password" 
+          hasError={Boolean(formState.errors?.password?.message)}
+
+        />
+        <FormError message={formState.errors?.password?.message} />
+
         <Button
             type="submit"
-            value="Log in"
-            disabled={username === "" && username.length < 10}
+            value={loading ? "Loading..." : "Log in"}
+            disabled={!formState.isValid || loading}
           />
+          <FormError message={formState.errors?.result?.message} />
       </form>
       <Separator />
       <FacebookLogin>
