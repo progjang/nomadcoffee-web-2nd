@@ -37,7 +37,7 @@ const LOGIN_MUTATION = gql`
 `;
 
 function Login() {
-  const {register, handleSubmit, formState, getValues, setError, clearErrors} = useForm({
+  const {register, handleSubmit, formState, setError, clearErrors} = useForm({
     mode: "onChange",
   });
   const onCompleted = (data) => {
