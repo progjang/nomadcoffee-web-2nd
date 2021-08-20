@@ -42,7 +42,7 @@ function Login() {
   });
   const onCompleted = (data) => {
     const {login:{ok, error, token}} = data;
-    if(!ok){
+    if(!ok && error){
       setError("result", {
         message: error,
       });
@@ -59,7 +59,8 @@ function Login() {
     if(loading) {
       return;
     }
-    const {username, password } = getValues();
+//    const {username, password } = getValues();
+    const {username, password } = data;
     login({
       variables: {
         username,
